@@ -61,6 +61,7 @@ crossbeam-channel = "0.5.6"
 num-traits = "0.2"
 float-ord = "0.3"
 color_space = "0.5"
+sysinfo = "0.29.9"
 # ffmpeg-next = "6"
 
 [dev-dependencies]

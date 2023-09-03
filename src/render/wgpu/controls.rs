@@ -9,6 +9,7 @@ use epi::Frame;
 use std::iter;
 use std::sync::Arc;
 use std::time::Instant;
+use sysinfo::{get_current_pid, ProcessExt, System, SystemExt};
 use winit::dpi::PhysicalSize;
 use winit::event::Event;
 use winit::event_loop::EventLoop;
@@ -72,6 +73,9 @@ impl Attachable for Controller {
 
         let egui_rpass = RenderPass::new(&gpu.device, surface_format, 1);
 
+        let mut sys = System::new_all();
+        sys.refresh_all();
+
         let object = ControlWindow {
             gpu,
             event_proxy,
@@ -86,6 +90,8 @@ impl Attachable for Controller {
             listeners: Vec::new(),
             display_help: false,
             my_id: window.id(),
+            sys: sys,
+            last_refresh: Instant::now(),
         };
 
         (object, window)
@@ -107,6 +113,9 @@ pub struct ControlWindow {
     listeners: Vec<WindowId>,
     display_help: bool,
     my_id: WindowId,
+
+    sys: System,
+    last_refresh: Instant,
 }
 
 impl ControlWindow {
@@ -135,6 +144,21 @@ impl ControlWindow {
                     cgmath::Deg::from(info.camera.pitch)
                 )));
                 ui.add(Label::new(format!("Avg fps: {:?}", info.fps)));
+
+                let process = self.sys.process(get_current_pid().unwrap()).unwrap();
+                ui.add(Label::new(format!(
+                    "Memory used: {:.2} GB", process.memory() as f64 / (u64::pow(1024, 3) as f64))
+                )); 
+                ui.add(Label::new(format!(
+                    "CPU used: {:.2} %", process.cpu_usage()
+                )));
+
+                let disk_usage = process.disk_usage();
+                ui.add(Label::new(format!(
+                    "read bytes: new / total => {} / {} MB",
+                    disk_usage.read_bytes / u64::pow(1024, 2),
+                    disk_usage.total_read_bytes / u64::pow(1024, 2),
+                )));
 
                 let display_or_hide = if self.display_help {
                     "Hide"
@@ -222,6 +246,10 @@ impl Windowed for ControlWindow {
                     self.info = Some(*info);
                     self.prev_slider_position = info.current_position;
                     self.slider_position = info.current_position;
+                    if Instant::now() - self.last_refresh > System::MINIMUM_CPU_UPDATE_INTERVAL {
+                        self.sys.refresh_process(get_current_pid().unwrap());
+                        self.last_refresh = Instant::now();
+                    }
                 }
                 _ => {}
             },
