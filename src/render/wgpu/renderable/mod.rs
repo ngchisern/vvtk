@@ -6,6 +6,7 @@ use wgpu::{
 };
 use winit::dpi::PhysicalSize;
 
+use crate::downsample::octree::downsample;
 use crate::formats::{pointxyzrgba::PointXyzRgba, PointCloud};
 
 use super::antialias::AntiAlias;
@@ -50,6 +51,7 @@ pub trait Renderable: Clone {
     }
     fn bytes(&self) -> &[u8];
     fn vertices(&self) -> usize;
+    fn downsample(&self, points_per_voxel: usize) -> Self;
 }
 
 impl Renderable for PointCloud<PointXyzRgba> {
@@ -194,10 +196,21 @@ impl Renderable for PointCloud<PointXyzRgba> {
     }
 
     fn create_buffer(&self, device: &wgpu::Device) -> wgpu::Buffer {
+        // 1 MB
+        let chunks = self.bytes().chunks_exact(1_000_000);
+
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: self.bytes(),
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         })
+    }
+
+    fn downsample(&self, points_per_voxel: usize) -> PointCloud<PointXyzRgba> {
+        if self.points.is_empty() {
+            self.clone()
+        } else {
+            downsample(self.clone(), points_per_voxel)
+        }
     }
 }

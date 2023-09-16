@@ -3281,6 +3281,7 @@ dependencies = [
  "color_space",
  "criterion",
  "crossbeam-channel",
+ "csv",
  "egui 0.19.0",
  "egui_wgpu_backend",
  "egui_winit_platform",

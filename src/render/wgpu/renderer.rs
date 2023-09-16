@@ -387,9 +387,14 @@ where
     }
 
     fn update_vertices(&mut self) -> bool {
+        // let instant = Instant::now();
         if let Some(data) = self.current() {
+            // println!("Get current data takes: {:?}", instant.elapsed());
+            // let downsampled = data.downsample(4);
+            // println!("Downsample takes: {:?}", instant.elapsed());
             self.pcd_renderer
                 .update_vertices(&self.gpu.device, &self.gpu.queue, &data);
+            // println!("Update vertices takes: {:?}", instant.elapsed());
             return true;
         }
         false
@@ -500,11 +505,14 @@ where
 
     pub fn update_vertices(&mut self, device: &Device, queue: &Queue, data: &T) {
         let vertices = data.vertices();
+        // let instant = Instant::now();
         if vertices > self.num_vertices {
             self.vertex_buffer.destroy();
             self.vertex_buffer = data.create_buffer(device);
+            // println!("Create buffer takes: {:?}", instant.elapsed());
         } else {
             queue.write_buffer(&self.vertex_buffer, 0, data.bytes());
+            // println!("Write buffer takes: {:?}", instant.elapsed());
         }
         self.num_vertices = vertices;
     }

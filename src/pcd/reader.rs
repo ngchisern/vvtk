@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::str::FromStr;
+// use std::time::Instant;
 use thiserror::Error;
 
 type Result<T> = std::result::Result<T, PCDReadError>;
@@ -289,10 +290,14 @@ impl<R: BufRead> Parser<R> {
 
     fn parse_binary_data(mut self, header: PCDHeader) -> Result<PointCloudData> {
         let mut buffer = vec![];
+        // let instant = Instant::now();
         self.reader
             .read_to_end(&mut buffer)
             .map_err(PCDReadError::IOError)?;
-        PointCloudData::new(header, buffer).map_err(PCDReadError::InvalidData)
+        // println!("Read to end: {:?}", instant.elapsed());
+        let a = PointCloudData::new(header, buffer).map_err(PCDReadError::InvalidData);
+        // println!("New point cloud data: {:?}", instant.elapsed());
+        a
     }
 
     fn strip_line_prefix(&mut self, prefix: &str) -> Result<&str> {

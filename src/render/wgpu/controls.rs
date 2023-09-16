@@ -2,10 +2,12 @@ use crate::render::wgpu::builder::{
     Attachable, EventType, RenderEvent, RenderInformation, Windowed,
 };
 use crate::render::wgpu::gpu::WindowGpu;
+// use csv::Writer;
 use egui::{Button, CentralPanel, Context, FontDefinitions, Label, Slider};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use egui_winit_platform::{Platform, PlatformDescriptor};
 use epi::Frame;
+// use std::fs::OpenOptions;
 use std::iter;
 use std::sync::Arc;
 use std::time::Instant;
@@ -76,6 +78,24 @@ impl Attachable for Controller {
         let mut sys = System::new_all();
         sys.refresh_all();
 
+        // let mut csv_writer = Writer::from_writer(
+        //     OpenOptions::new()
+        //         .write(true)
+        //         .create(true)
+        //         .append(true)
+        //         .open("performance_metrics.csv")
+        //         .unwrap(),
+        // );
+        // csv_writer
+        //     .write_record(&[
+        //         "Timestamp",
+        //         "CPU_Usage",
+        //         "Memory_Usage",
+        //         "Disk New Read",
+        //         "Disk Total Read",
+        //     ])
+        //     .unwrap();
+
         let object = ControlWindow {
             gpu,
             event_proxy,
@@ -92,6 +112,7 @@ impl Attachable for Controller {
             my_id: window.id(),
             sys: sys,
             last_refresh: Instant::now(),
+            // csv_writer: csv_writer,
         };
 
         (object, window)
@@ -116,6 +137,7 @@ pub struct ControlWindow {
 
     sys: System,
     last_refresh: Instant,
+    // csv_writer: Writer<std::fs::File>,
 }
 
 impl ControlWindow {
@@ -146,19 +168,28 @@ impl ControlWindow {
                 ui.add(Label::new(format!("Avg fps: {:?}", info.fps)));
 
                 let process = self.sys.process(get_current_pid().unwrap()).unwrap();
-                ui.add(Label::new(format!(
-                    "Memory used: {:.2} GB", process.memory() as f64 / (u64::pow(1024, 3) as f64))
-                )); 
-                ui.add(Label::new(format!(
-                    "CPU used: {:.2} %", process.cpu_usage()
-                )));
-
+                let memory_usage = process.memory() as f64 / (u64::pow(1024, 3) as f64);
+                let cpu_usage = process.cpu_usage();
                 let disk_usage = process.disk_usage();
+                let read_bytes = disk_usage.read_bytes / u64::pow(1024, 2);
+                let total_read_bytes = disk_usage.total_read_bytes / u64::pow(1024, 2);
+
+                ui.add(Label::new(format!("Memory used: {:.2} GB", memory_usage))); 
+                ui.add(Label::new(format!("CPU used: {:.2} %", cpu_usage)));
                 ui.add(Label::new(format!(
                     "read bytes: new / total => {} / {} MB",
-                    disk_usage.read_bytes / u64::pow(1024, 2),
-                    disk_usage.total_read_bytes / u64::pow(1024, 2),
+                    read_bytes,
+                    total_read_bytes
                 )));
+
+                // self.csv_writer.write_record(&[
+                //     format!("{:?}", self.start_time.unwrap().elapsed().as_millis()),
+                //     format!("{:.2}", cpu_usage),
+                //     format!("{:.2}", memory_usage),
+                //     format!("{}", read_bytes),
+                //     format!("{}", total_read_bytes),
+                // ]).unwrap();
+                // self.csv_writer.flush().unwrap();
 
                 let display_or_hide = if self.display_help {
                     "Hide"
