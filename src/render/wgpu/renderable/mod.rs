@@ -50,6 +50,7 @@ pub trait Renderable: Clone {
     }
     fn bytes(&self) -> &[u8];
     fn vertices(&self) -> usize;
+    fn mid_point(&self) -> [f32; 3];
 }
 
 impl Renderable for PointCloud<PointXyzRgba> {
@@ -199,5 +200,30 @@ impl Renderable for PointCloud<PointXyzRgba> {
             contents: self.bytes(),
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         })
+    }
+
+    fn mid_point(&self) -> [f32; 3] {
+        let first_point = self.points.get(0).unwrap();
+        let mut max_x = first_point.x;
+        let mut max_y = first_point.y;
+        let mut max_z = first_point.z;
+        let mut min_x = first_point.x;
+        let mut min_y = first_point.y;
+        let mut min_z = first_point.z;
+
+        for point in &self.points {
+            max_x = max_x.max(point.x);
+            max_y = max_y.max(point.y);
+            max_z = max_z.max(point.z);
+            min_x = min_x.min(point.x);
+            min_y = min_y.min(point.y);
+            min_z = min_z.min(point.z);
+        }
+
+        [
+            (max_x + min_x) / 2.0,
+            (max_y + min_y) / 2.0,
+            (max_z + min_z) / 2.0,
+        ]
     }
 }
