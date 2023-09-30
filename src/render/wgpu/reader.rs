@@ -13,83 +13,106 @@ use super::renderable::Renderable;
 pub trait RenderReader<T: Renderable> {
     fn start(&mut self) -> Option<T>;
     fn get_at(&mut self, index: usize) -> Option<T>;
+    fn get_at_with_lod(&mut self, index: usize, lod: usize) -> Option<T>;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn set_len(&mut self, len: usize);
 }
 
 pub struct PcdFileReader {
-    files: Vec<PathBuf>,
+    files: Vec<Vec<PathBuf>>,
 }
 
 impl PcdFileReader {
     pub fn from_directory(directory: &Path) -> Self {
+        Self::from_directories(vec![directory])
+    }
+
+    pub fn from_directories(directories: Vec<&Path>) -> Self {
         let mut files = vec![];
-        for file_entry in directory.read_dir().unwrap() {
-            match file_entry {
-                Ok(entry) => {
-                    if let Some(ext) = entry.path().extension() {
-                        if ext.eq("pcd") {
-                            files.push(entry.path());
+        for directory in directories {
+            let mut files_in_dir = vec![];
+            for file_entry in directory.read_dir().unwrap() {
+                match file_entry {
+                    Ok(entry) => {
+                        if let Some(ext) = entry.path().extension() {
+                            if ext.eq("pcd") {
+                                files_in_dir.push(entry.path());
+                            }
                         }
                     }
-                }
-                Err(e) => {
-                    eprintln!("{e}")
+                    Err(e) => {
+                        eprintln!("{e}")
+                    }
                 }
             }
+            files_in_dir.sort();
+            files.push(files_in_dir);
         }
-        files.sort();
         Self { files }
     }
 
     pub fn file_at(&self, index: usize) -> Option<&PathBuf> {
-        self.files.get(index)
+        self.files.get(0).and_then(|f| f.get(index))
     }
 }
 
 pub struct PointCloudFileReader {
-    files: Vec<PathBuf>,
+    // files level by level
+    files: Vec<Vec<PathBuf>>,
 }
 
 impl PointCloudFileReader {
     pub fn from_directory(directory: &Path, file_type: &str) -> Self {
+        Self::from_directories(vec![directory], file_type)
+    }
+
+    pub fn from_directories(directories: Vec<&Path>, file_type: &str) -> Self {
         let mut files = vec![];
-        for file_entry in directory.read_dir().unwrap() {
-            match file_entry {
-                Ok(entry) => {
-                    if let Some(ext) = entry.path().extension() {
-                        if ext.eq(file_type) {
-                            files.push(entry.path());
+
+        for directory in directories {
+            let mut files_in_dir = vec![];
+            for file_entry in directory.read_dir().unwrap() {
+                match file_entry {
+                    Ok(entry) => {
+                        if let Some(ext) = entry.path().extension() {
+                            if ext.eq(file_type) {
+                                files_in_dir.push(entry.path());
+                            }
                         }
                     }
-                }
-                Err(e) => {
-                    eprintln!("{e}")
+                    Err(e) => {
+                        eprintln!("{e}")
+                    }
                 }
             }
+            files_in_dir.sort();
+            files.push(files_in_dir);
         }
-        files.sort();
         Self { files }
     }
 }
 
 impl RenderReader<PointCloud<PointXyzRgba>> for PointCloudFileReader {
     fn start(&mut self) -> Option<PointCloud<PointXyzRgba>> {
-        self.get_at(0)
+        self.get_at_with_lod(0, self.files.len() - 1)
     }
 
     fn get_at(&mut self, index: usize) -> Option<PointCloud<PointXyzRgba>> {
-        let file_path = self.files.get(index)?;
+        self.get_at_with_lod(index, 0)
+    }
+
+    fn get_at_with_lod(&mut self, index: usize, lod: usize) -> Option<PointCloud<PointXyzRgba>> {
+        let file_path = self.files[lod].get(index)?;
         read_file_to_point_cloud(file_path)
     }
 
     fn len(&self) -> usize {
-        self.files.len()
+        self.files.get(0).map(|f| f.len()).unwrap_or(0)
     }
 
     fn is_empty(&self) -> bool {
-        self.files.is_empty()
+        self.files.get(0).map(|f| f.is_empty()).unwrap_or(true)
     }
 
     fn set_len(&mut self, _len: usize) {}
@@ -97,12 +120,17 @@ impl RenderReader<PointCloud<PointXyzRgba>> for PointCloudFileReader {
 
 impl RenderReader<PointCloud<PointXyzRgba>> for PcdFileReader {
     fn start(&mut self) -> Option<PointCloud<PointXyzRgba>> {
-        self.get_at(0)
+        self.get_at_with_lod(0, self.files.len() - 1)
     }
 
     fn get_at(&mut self, index: usize) -> Option<PointCloud<PointXyzRgba>> {
+        self.get_at_with_lod(index, 0)
+    }
+
+    fn get_at_with_lod(&mut self, index: usize, lod: usize) -> Option<PointCloud<PointXyzRgba>> {
         self.files
-            .get(index)
+            .get(lod)
+            .and_then(|f| f.get(index))
             .and_then(|f| read_pcd_file(f).ok())
             .map(PointCloud::from)
     }
@@ -131,6 +159,11 @@ impl PcdMemoryReader {
 impl RenderReader<PointCloud<PointXyzRgba>> for PcdMemoryReader {
     fn get_at(&mut self, index: usize) -> Option<PointCloud<PointXyzRgba>> {
         self.points.get(index).cloned()
+    }
+
+    fn get_at_with_lod(&mut self, index: usize, _lod: usize) -> Option<PointCloud<PointXyzRgba>> {
+        // FIXME: implement lod
+        self.get_at(index)
     }
 
     fn start(&mut self) -> Option<PointCloud<PointXyzRgba>> {
@@ -262,6 +295,11 @@ impl RenderReader<PointCloud<PointXyzRgba>> for PcdAsyncReader {
                 self.buffer.insert(req, data);
             }
         }
+    }
+
+    fn get_at_with_lod(&mut self, index: usize, _lod: usize) -> Option<PointCloud<PointXyzRgba>> {
+        // FIXME: implement lod
+        self.get_at(index)
     }
 
     fn len(&self) -> usize {

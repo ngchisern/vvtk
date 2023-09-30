@@ -17,7 +17,7 @@ struct Args {
     /// src can be:
     /// 1. Directory with all the pcd files in lexicographical order
     /// 2. location of the mpd file
-    src: String,
+    src: Vec<String>,
     #[clap(short = 'q', long, default_value_t = 0)]
     quality: u8,
     #[clap(short, long, default_value_t = 30.0)]
@@ -114,12 +114,12 @@ fn infer_format(src: &String) -> String {
 
 fn main() {
     let args: Args = Args::parse();
-    let play_format = infer_format(&args.src);
-    let path = Path::new(&args.src);
+    let play_format = infer_format(&args.src[0]);
+    let paths = args.src.iter().map(|s| Path::new(s)).collect::<Vec<_>>();
 
     // println!("Playing files in {:?} with format {}", path, play_format);
 
-    let reader = PointCloudFileReader::from_directory(path, &play_format);
+    let reader = PointCloudFileReader::from_directories(paths, &play_format);
 
     if reader.len() == 0 {
         eprintln!("Must provide at least one file!");

@@ -331,6 +331,10 @@ where
         self.reader.get_at(self.current_position)
     }
 
+    fn current_with_lod(&mut self, lod: usize) -> Option<U> {
+        self.reader.get_at_with_lod(self.current_position, lod)
+    }
+
     fn handle_device_event(&mut self, event: &DeviceEvent) {
         self.camera_state.process_input(event);
         if let DeviceEvent::Key(KeyboardInput {
@@ -388,6 +392,18 @@ where
 
     fn update_vertices(&mut self) -> bool {
         if let Some(data) = self.current() {
+            let mid_point = data.mid_point();
+            let distance = self.camera_state.distance(mid_point);
+
+            let data = if distance <= 5.0 {
+                self.current_with_lod(2).unwrap()
+            } else if distance <= 10.0 {
+                self.current_with_lod(1).unwrap()
+            } else {
+                self.current_with_lod(0).unwrap()
+            };
+            // println!("distance: {:?}, data: {}", distance, data.vertices());
+
             self.pcd_renderer
                 .update_vertices(&self.gpu.device, &self.gpu.queue, &data);
             return true;
