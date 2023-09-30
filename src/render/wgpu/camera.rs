@@ -126,6 +126,12 @@ impl CameraState {
             _ => false,
         }
     }
+
+    pub fn distance(&mut self, point: [f32; 3]) -> f32 {
+        let point = Point3::from(point);
+        let distance = (self.camera.position - point).magnitude();
+        distance
+    }
 }
 
 #[repr(C)]

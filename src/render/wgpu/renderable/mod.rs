@@ -203,27 +203,17 @@ impl Renderable for PointCloud<PointXyzRgba> {
     }
 
     fn mid_point(&self) -> [f32; 3] {
-        let first_point = self.points.get(0).unwrap();
-        let mut max_x = first_point.x;
-        let mut max_y = first_point.y;
-        let mut max_z = first_point.z;
-        let mut min_x = first_point.x;
-        let mut min_y = first_point.y;
-        let mut min_z = first_point.z;
+        let mut sum_x = 0.0;
+        let mut sum_y = 0.0;
+        let mut sum_z = 0.0;
+        let count = self.points.len() as f32;
 
-        for point in &self.points {
-            max_x = max_x.max(point.x);
-            max_y = max_y.max(point.y);
-            max_z = max_z.max(point.z);
-            min_x = min_x.min(point.x);
-            min_y = min_y.min(point.y);
-            min_z = min_z.min(point.z);
+        for p in self.points.iter() {
+            sum_x += p.x;
+            sum_y += p.y;
+            sum_z += p.z;
         }
 
-        [
-            (max_x + min_x) / 2.0,
-            (max_y + min_y) / 2.0,
-            (max_z + min_z) / 2.0,
-        ]
+        [sum_x / count, sum_y / count, sum_z / count]
     }
 }
