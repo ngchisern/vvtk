@@ -14,8 +14,9 @@ use self::{
     executor::Executor,
     executor::ExecutorBuilder,
     subcommands::{
-        convert, dash, downsample, info, metrics, read, render, upsample, write, Convert, Dash,
-        Downsampler, Info, MetricsCalculator, Read, Render, Subcommand, Upsampler, Write,
+        convert, dash, downsample, info, metrics, midpoint, read, render, upsample, write, Convert,
+        Dash, Downsampler, Info, MetricsCalculator, Midpoint, Read, Render, Subcommand, Upsampler,
+        Write,
     },
 };
 
@@ -27,6 +28,7 @@ fn subcommand(s: &str) -> Option<SubcommandCreator> {
         "render" => Some(Box::from(Render::from_args)),
         "read" => Some(Box::from(Read::from_args)),
         "metrics" => Some(Box::from(MetricsCalculator::from_args)),
+        "midpoint" => Some(Box::from(Midpoint::from_args)),
         "downsample" => Some(Box::from(Downsampler::from_args)),
         "upsample" => Some(Box::from(Upsampler::from_args)),
         "convert" => Some(Box::from(Convert::from_args)),
@@ -193,6 +195,8 @@ enum VVSubCommand {
     Render(render::Args),
     #[clap(name = "metrics")]
     Metrics(metrics::Args),
+    #[clap(name = "midpoint")]
+    Midpoint(midpoint::Args),
     #[clap(name = "downsample")]
     Downsample(downsample::Args),
     #[clap(name = "upsample")]
@@ -217,6 +221,7 @@ mod pipeline_mod_test {
         assert!(Pipeline::if_at_least_one_command("write"));
         assert!(Pipeline::if_at_least_one_command("render"));
         assert!(Pipeline::if_at_least_one_command("metrics"));
+        assert!(Pipeline::if_at_least_one_command("midpoint"));
         assert!(Pipeline::if_at_least_one_command("downsample"));
         assert!(Pipeline::if_at_least_one_command("upsample"));
         assert!(Pipeline::if_at_least_one_command("convert"));

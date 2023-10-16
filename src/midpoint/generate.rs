@@ -20,8 +20,8 @@ pub fn generate_midpoint(points: PointCloud<PointXyzRgba>) -> [f32; 3] {
     }
 
     [
-        (max_x - min_x) / 2,
-        (max_y - min_y) / 2,
-        (max_z - min_z) / 2,
+        (max_x - min_x) / 2.0,
+        (max_y - min_y) / 2.0,
+        (max_z - min_z) / 2.0,
     ]
 }

@@ -8,6 +8,7 @@ pub mod dash;
 pub mod downsample;
 pub mod formats;
 pub mod metrics;
+pub mod midpoint;
 pub mod pcd;
 pub mod pipeline;
 pub mod ply;
