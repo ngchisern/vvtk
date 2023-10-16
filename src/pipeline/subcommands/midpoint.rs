@@ -34,8 +34,8 @@ impl Subcommand for Midpoint {
         for message in messages {
             match message {
                 PipelineMessage::IndexedPointCloud(pc, _) => {
-                    let midpoint_pc = generate_midpoint(pc);
-                    self.midpoints.push(midpoint_pc);
+                    let midpoint = generate_midpoint(pc);
+                    self.midpoints.push(midpoint);
                 }
                 PipelineMessage::Metrics(_) | PipelineMessage::DummyForIncrement => {}
                 PipelineMessage::End => {
