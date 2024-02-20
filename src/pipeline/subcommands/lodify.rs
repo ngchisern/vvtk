@@ -56,20 +56,18 @@ impl Subcommand for Lodifier {
         for message in messages {
             match message {
                 PipelineMessage::IndexedPointCloud(pc, i) => {
-                    let point_clouds = lodify(
+                    let (base_pc, pc_by_segment, point_num_per_segment) = lodify(
                         &pc,
                         self.partitions,
                         self.proportions.clone(),
                         self.points_per_voxel_threshold,
                     );
 
-                    let base_pc = point_clouds.first().unwrap().clone();
-
-                    for (resolution, pc) in point_clouds.into_iter().enumerate() {
-                        channel.send(PipelineMessage::IndexedPointCloudWithResolution(
+                    for (segment, pc) in pc_by_segment.into_iter().enumerate() {
+                        channel.send(PipelineMessage::IndexedPointCloudWithName(
                             pc,
                             i,
-                            resolution as u32,
+                            segment as u32,
                         ));
                     }
 
@@ -89,7 +87,7 @@ impl Subcommand for Lodifier {
                     ));
                 }
                 PipelineMessage::Metrics(_)
-                | PipelineMessage::IndexedPointCloudWithResolution(_, _, _)
+                | PipelineMessage::IndexedPointCloudWithName(_, _, _)
                 | PipelineMessage::IndexedPointCloudNormal(_, _)
                 | PipelineMessage::ManifestInformation(_, _, _, _)
                 | PipelineMessage::DummyForIncrement => {}

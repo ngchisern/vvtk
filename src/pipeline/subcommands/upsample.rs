@@ -37,7 +37,7 @@ impl Subcommand for Upsampler {
                 }
                 PipelineMessage::Metrics(_)
                 | PipelineMessage::IndexedPointCloudNormal(_, _)
-                | PipelineMessage::IndexedPointCloudWithResolution(_, _, _)
+                | PipelineMessage::IndexedPointCloudWithName(_, _, _)
                 | PipelineMessage::ManifestInformation(_, _, _, _)
                 | PipelineMessage::DummyForIncrement => {}
                 PipelineMessage::End => {

@@ -156,7 +156,7 @@ impl Subcommand for Write {
                         }
                     }
                 }
-                PipelineMessage::IndexedPointCloudWithResolution(pc, i, resolution) => {
+                PipelineMessage::IndexedPointCloudWithName(pc, i, name) => {
                     let pcd_data_type = self
                         .args
                         .storage_type
@@ -181,13 +181,13 @@ impl Subcommand for Write {
                         let (subfolder, file_name) = if pc.is_partitioned() {
                             (
                                 output_path
-                                    .join(format!("{}", resolution))
+                                    .join(format!("{}", name))
                                     .join(format!("{}", padded_count)),
                                 format!("{}.{}", s_index, output_format),
                             )
                         } else {
                             (
-                                output_path.join(format!("{}", resolution)),
+                                output_path.join(format!("{}", name)),
                                 format!("{}.{}", padded_count, output_format),
                             )
                         };

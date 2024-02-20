@@ -53,7 +53,7 @@ impl Subcommand for Subsampler {
                         self.points_per_voxel_threshold,
                     );
                     for (resolution, pc) in point_clouds.into_iter().enumerate() {
-                        channel.send(PipelineMessage::IndexedPointCloudWithResolution(
+                        channel.send(PipelineMessage::IndexedPointCloudWithName(
                             pc,
                             i,
                             resolution as u32,
@@ -61,7 +61,7 @@ impl Subcommand for Subsampler {
                     }
                 }
                 PipelineMessage::Metrics(_)
-                | PipelineMessage::IndexedPointCloudWithResolution(_, _, _)
+                | PipelineMessage::IndexedPointCloudWithName(_, _, _)
                 | PipelineMessage::IndexedPointCloudNormal(_, _)
                 | PipelineMessage::ManifestInformation(_, _, _, _)
                 | PipelineMessage::DummyForIncrement => {}
