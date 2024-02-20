@@ -16,12 +16,12 @@ use ply_rs::{
     ply::{Encoding, Header as PLYHeader, Payload},
     writer,
 };
+use std::fs::File;
 use std::str::FromStr;
 use std::{
     ffi::OsString,
     path::{Path, PathBuf},
 };
-use std::{fs::File, process::exit};
 
 #[derive(Clone)]
 pub struct PointCloudInfo {
@@ -46,15 +46,12 @@ impl From<PLYHeader> for PointCloudInfo {
 
 pub fn read_file_to_point_cloud(file: &PathBuf) -> Option<PointCloud<PointXyzRgba>> {
     if let Some(ext) = file.extension().and_then(|ext| ext.to_str()) {
-        let time = std::time::Instant::now();
         let point_cloud = match ext {
             "ply" => read_ply(file),
             "pcd" => read_pcd_file(file).map(PointCloud::from).ok(),
             "bin" => read_velodyn_bin_file(file).map(PointCloud::from).ok(),
             _ => None,
         };
-        println!("Time taken to read: {:?}", time.elapsed());
-        exit(0);
         return point_cloud;
     }
     None

@@ -5,7 +5,7 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::str::FromStr;
 use thiserror::Error;
@@ -36,7 +36,7 @@ pub fn read_pcd_header<P: AsRef<Path>>(p: P) -> Result<PCDHeader> {
 ///     Ok(())
 /// }
 /// ```
-pub fn read_pcd<R: Read + Seek>(r: R) -> Result<PointCloudData> {
+pub fn read_pcd<R: Read>(r: R) -> Result<PointCloudData> {
     let reader = BufReader::new(r);
     Parser::new(reader).parse()
 }
@@ -64,12 +64,12 @@ pub enum PCDReadError {
     InvalidData(String),
 }
 
-struct Parser<R: BufRead + Seek> {
+struct Parser<R: BufRead> {
     reader: R,
     line: String,
 }
 
-impl<R: BufRead + Seek> Parser<R> {
+impl<R: BufRead> Parser<R> {
     fn new(reader: R) -> Self {
         Self {
             reader,
@@ -289,7 +289,6 @@ impl<R: BufRead + Seek> Parser<R> {
 
     fn parse_binary_data(mut self, header: PCDHeader) -> Result<PointCloudData> {
         let mut buffer = vec![];
-        self.reader.seek(SeekFrom::Start(0))?;
         self.reader
             .read_to_end(&mut buffer)
             .map_err(PCDReadError::IOError)?;
@@ -359,8 +358,8 @@ mod tests {
         .unwrap()
     }
 
-    fn parse_str(s: &str) -> Parser<BufReader<Cursor<&[u8]>>> {
-        Parser::new(BufReader::new(Cursor::new(s.as_bytes())))
+    fn parse_str(s: &str) -> Parser<BufReader<&[u8]>> {
+        Parser::new(BufReader::new(s.as_bytes()))
     }
 
     fn assert_header_fail<T>(result: Result<T, PCDReadError>, fail_section: &str) {
@@ -621,7 +620,7 @@ mod tests {
                DATA ascii \n\
         ";
 
-        let mut parser = parse_str(header_str);
+        let mut parser = Parser::new(BufReader::new(header_str.as_bytes()));
         let header = parser.parse_header().unwrap();
         assert_eq!(header, expected_header());
     }
@@ -652,7 +651,7 @@ mod tests {
                # I am another comment\n\
         ";
 
-        let mut parser = parse_str(header_str);
+        let mut parser = Parser::new(BufReader::new(header_str.as_bytes()));
         let header = parser.parse_header().unwrap();
         assert_eq!(header, expected_header());
     }
