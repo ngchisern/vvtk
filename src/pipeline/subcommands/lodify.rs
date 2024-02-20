@@ -56,7 +56,7 @@ impl Subcommand for Lodifier {
         for message in messages {
             match message {
                 PipelineMessage::IndexedPointCloud(pc, i) => {
-                    let (base_pc, pc_by_segment, point_num_per_segment) = lodify(
+                    let (base_pc, pc_by_segment, point_num_by_res) = lodify(
                         &pc,
                         self.partitions,
                         self.proportions.clone(),
@@ -79,17 +79,18 @@ impl Subcommand for Lodifier {
                         .map(|points| points.points.len())
                         .collect();
 
-                    channel.send(PipelineMessage::ManifestInformation(
+                    channel.send(PipelineMessage::MetaData(
                         bound,
                         point_nums,
-                        self.proportions.len() - 1,
+                        point_num_by_res.len(),
                         self.partitions,
+                        point_num_by_res,
                     ));
                 }
                 PipelineMessage::Metrics(_)
                 | PipelineMessage::IndexedPointCloudWithName(_, _, _)
                 | PipelineMessage::IndexedPointCloudNormal(_, _)
-                | PipelineMessage::ManifestInformation(_, _, _, _)
+                | PipelineMessage::MetaData(_, _, _, _, _)
                 | PipelineMessage::DummyForIncrement => {}
                 PipelineMessage::End => {
                     channel.send(message);

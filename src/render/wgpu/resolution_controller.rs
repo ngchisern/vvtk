@@ -45,7 +45,7 @@ impl ResolutionController {
             .get(index)
             .unwrap()
             .partition(metadata.partitions);
-        let base_point_num = metadata.point_nums.get(index).unwrap();
+        let base_point_num = metadata.base_point_num.get(index).unwrap();
 
         zip(bounds.iter(), base_point_num.iter())
             .map(|(bound, point_num)| {

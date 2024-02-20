@@ -220,13 +220,18 @@ impl Subcommand for Write {
                         }
                     }
                 }
-                PipelineMessage::ManifestInformation(
+                PipelineMessage::MetaData(
                     bound,
                     point_num,
                     num_of_additional_file,
                     partitions,
+                    point_nums_per_segment,
                 ) => {
-                    self.metadata.next(bound.clone(), point_num.clone());
+                    self.metadata.next(
+                        bound.clone(),
+                        point_num.clone(),
+                        point_nums_per_segment.clone(),
+                    );
                     self.metadata.num_of_additional_file = *num_of_additional_file;
                     self.metadata.partitions = *partitions;
                 }
