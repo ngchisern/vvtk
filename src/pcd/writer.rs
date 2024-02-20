@@ -174,7 +174,7 @@ mod tests {
     };
     use byteorder::{NativeEndian, WriteBytesExt};
     use image::EncodableLayout;
-    use std::io::{BufReader, BufWriter};
+    use std::io::{BufReader, BufWriter, Cursor};
 
     #[test]
     fn test_write_ascii() {
@@ -270,7 +270,7 @@ mod tests {
         let mut buf = BufWriter::new(Vec::new());
         write_pcd(&pcd, PCDDataType::Binary, &mut buf).unwrap();
         let vec = buf.into_inner().unwrap();
-        let rdr = BufReader::new(vec.as_bytes());
+        let rdr = BufReader::new(Cursor::new(vec.as_bytes()));
         let new_pcd = read_pcd(rdr).unwrap();
         assert_eq!(new_pcd.header(), pcd.header());
         assert_eq!(new_pcd.data(), pcd.data());
