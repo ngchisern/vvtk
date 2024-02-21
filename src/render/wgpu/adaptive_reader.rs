@@ -1,6 +1,7 @@
 use crate::formats::metadata::MetaData;
 use crate::formats::pointxyzrgba::PointXyzRgba;
 use crate::formats::PointCloud;
+use std::ops::Add;
 use std::path::Path;
 use std::process::exit;
 
@@ -59,7 +60,11 @@ fn infer_format(src: &String) -> String {
 
 impl AdaptiveReader {
     pub fn new(src: &String, lod: bool) -> Self {
-        let base_path = if lod { src.clone() + "/0" } else { src.clone() };
+        let base_path = if lod {
+            src.clone() + "/base"
+        } else {
+            src.clone()
+        };
 
         let play_format = infer_format(&base_path);
         let base_path = Path::new(&base_path);
@@ -80,10 +85,10 @@ impl AdaptiveReader {
                 exit(1);
             };
 
-            let additional_readers = (1..metadata.num_of_additional_file + 1)
+            let additional_readers = (0..metadata.num_of_additional_file)
                 .map(|i| {
                     let path = Path::new(&src).join(i.to_string());
-                    PointCloudFileReader::from_nested_directory(&path, &play_format)
+                    PointCloudFileReader::from_directory(&path, &play_format)
                 })
                 .collect::<Vec<_>>();
 
@@ -123,7 +128,9 @@ impl AdaptiveReader {
     }
 
     fn get_desired_point_cloud(&mut self, index: usize) -> Option<PointCloud<PointXyzRgba>> {
+        let mut now = std::time::Instant::now();
         let base_pc = self.base_reader.get_at(index).unwrap();
+        let total = now.elapsed();
 
         if self.additional_readers.is_none()
             || self.camera_state.is_none()
@@ -141,10 +148,11 @@ impl AdaptiveReader {
             .unwrap()
             .get_desired_num_points(index, self.camera_state.as_ref().unwrap(), true);
 
-        println!("desired_num_points: {:?}", additional_num_points_desired);
+        // println!("desired_num_points: {:?}", additional_num_points_desired);
 
         // println!("Time to get desired_num_points: {:?}", now.elapsed());
 
+        now = std::time::Instant::now();
         // for each num_of_points_required, read more points from additional readers into vector of points
         let additional_points_required = additional_num_points_desired
             .iter()
@@ -152,10 +160,11 @@ impl AdaptiveReader {
             .map(|(segment, &num)| self.read_more_points(index, num, segment))
             .collect::<Vec<_>>()
             .concat();
+        println!("total read time: {:?}", total.add(now.elapsed()));
         // println!("Time to read_more_points: {:?}", now.elapsed());
 
         let new_pc = base_pc.merge_points(additional_points_required);
-        // println!("Time to merge_points: {:?}", now.elapsed());
+        println!("Time to merge_points: {:?}", now.elapsed());
 
         println!(
             "base_pc: {}, new_pc: {},",
@@ -171,18 +180,20 @@ impl AdaptiveReader {
         num_of_points: usize,
         segment: usize,
     ) -> Vec<PointXyzRgba> {
-        let mut points = vec![];
+        if num_of_points <= 0 {
+            vec![]
+        } else {
+            let pc = self
+                .additional_readers
+                .as_ref()
+                .unwrap()
+                .get(segment)
+                .unwrap()
+                .get_exact_at(index, num_of_points as u64)
+                .unwrap();
 
-        for reader in self.additional_readers.as_ref().unwrap() {
-            if points.len() >= num_of_points {
-                break;
-            }
-
-            let pc = reader.get_nested_at(index, segment).unwrap();
-            points.extend(pc.points.iter().take(num_of_points));
+            pc.points
         }
-
-        points
     }
 }
 

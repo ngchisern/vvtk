@@ -110,6 +110,10 @@ impl PCDHeader {
         self.data_type
     }
 
+    pub fn set_points(&mut self, point_num: u64) {
+        self.points = point_num;
+    }
+
     /// Calculates the number of bytes that should be present in the
     /// data portion of the point cloud.
     pub fn buffer_size(&self) -> u64 {

@@ -62,7 +62,7 @@ impl ResolutionController {
                     .unwrap()
                     - margin)
                     .max(0.);
-                println!("z: {}", z);
+
                 let desired_num = self.get_desired_num_points_at(camera_state, z, *point_num);
                 if exclude_base_points {
                     desired_num - (*point_num).min(desired_num)

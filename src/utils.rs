@@ -4,8 +4,8 @@ use crate::{
         PointCloud,
     },
     pcd::{
-        create_pcd, read_pcd_file, read_pcd_header, write_pcd_file, PCDDataType, PCDHeader,
-        PointCloudData,
+        create_pcd, read_pcd_file, read_pcd_file_with_exact, read_pcd_header, write_pcd_file,
+        PCDDataType, PCDHeader, PointCloudData,
     },
     ply::{read_ply, read_ply_header},
     velodyne::read_velodyn_bin_file,
@@ -49,6 +49,24 @@ pub fn read_file_to_point_cloud(file: &PathBuf) -> Option<PointCloud<PointXyzRgb
         let point_cloud = match ext {
             "ply" => read_ply(file),
             "pcd" => read_pcd_file(file).map(PointCloud::from).ok(),
+            "bin" => read_velodyn_bin_file(file).map(PointCloud::from).ok(),
+            _ => None,
+        };
+        return point_cloud;
+    }
+    None
+}
+
+pub fn read_file_to_point_cloud_with_exact(
+    file: &PathBuf,
+    point_num: u64,
+) -> Option<PointCloud<PointXyzRgba>> {
+    if let Some(ext) = file.extension().and_then(|ext| ext.to_str()) {
+        let point_cloud = match ext {
+            "ply" => read_ply(file),
+            "pcd" => read_pcd_file_with_exact(file, point_num)
+                .map(PointCloud::from)
+                .ok(),
             "bin" => read_velodyn_bin_file(file).map(PointCloud::from).ok(),
             _ => None,
         };
