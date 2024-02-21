@@ -63,11 +63,17 @@ impl Subcommand for Lodifier {
                         self.points_per_voxel_threshold,
                     );
 
+                    channel.send(PipelineMessage::IndexedPointCloudWithName(
+                        base_pc.clone(),
+                        i,
+                        "base".to_string(),
+                    ));
+
                     for (segment, pc) in pc_by_segment.into_iter().enumerate() {
                         channel.send(PipelineMessage::IndexedPointCloudWithName(
                             pc,
                             i,
-                            segment as u32,
+                            format!("{}", segment),
                         ));
                     }
 

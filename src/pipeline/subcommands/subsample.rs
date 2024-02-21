@@ -56,7 +56,7 @@ impl Subcommand for Subsampler {
                         channel.send(PipelineMessage::IndexedPointCloudWithName(
                             pc,
                             i,
-                            resolution as u32,
+                            format!("subsampled_{}", resolution),
                         ));
                     }
                 }
