@@ -54,19 +54,19 @@ impl ResolutionController {
             let point_num = base_point_num.get(i).unwrap();
             let add_point_num = additional_point_num.get(i).unwrap();
 
-            let margin = (bound.max_x - bound.min_x)
-                .max(bound.max_y - bound.min_y)
-                .max(bound.max_z - bound.min_z)
-                / (self.anti_alias.scale * 2.0);
+            // let margin = (bound.max_x - bound.min_x)
+            //     .max(bound.max_y - bound.min_y)
+            //     .max(bound.max_z - bound.min_z)
+            //     / (self.anti_alias.scale * 2.0);
 
-            let z = (bound
+            let z = bound
                 .get_vertexes()
                 .iter()
                 .map(|poi| camera_state.distance(self.anti_alias.apply_single(poi)))
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap()
-                - margin)
-                .max(0.);
+                .unwrap();
+            // - margin)
+            // .max(0.);
 
             let desired_num = self.get_desired_num_points_at(camera_state, z, *point_num);
             let deficit = (desired_num - (*point_num).min(desired_num)).min(*add_point_num);
@@ -114,7 +114,8 @@ impl ResolutionController {
         }
 
         let mut sum = 0.0;
-        let k_nearest = 4;
+        // The value is currently hard coded. Can potentially be improved with variance
+        let k_nearest = 27;
 
         for p in points.iter() {
             let avg_spacing = tree
