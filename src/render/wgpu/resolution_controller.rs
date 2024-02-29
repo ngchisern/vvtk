@@ -6,7 +6,6 @@ use super::camera::CameraState;
 
 use kdtree::distance::squared_euclidean;
 use kdtree::KdTree;
-use std::iter::zip;
 use std::vec::Vec;
 
 pub struct ResolutionController {
@@ -46,31 +45,60 @@ impl ResolutionController {
             .unwrap()
             .partition(metadata.partitions);
         let base_point_num = metadata.base_point_num.get(index).unwrap();
+        let additional_point_nums = metadata.additional_point_nums.get(index).unwrap();
 
-        zip(bounds.iter(), base_point_num.iter())
-            .map(|(bound, point_num)| {
-                let margin = (bound.max_x - bound.min_x)
-                    .max(bound.max_y - bound.min_y)
-                    .max(bound.max_z - bound.min_z)
-                    / (self.anti_alias.scale * 2.0);
+        let mut desired_num_points = vec![0; bounds.len()];
 
-                let z = (bound
-                    .get_vertexes()
-                    .iter()
-                    .map(|poi| camera_state.distance(self.anti_alias.apply_single(poi)))
-                    .min_by(|a, b| a.partial_cmp(b).unwrap())
-                    .unwrap()
-                    - margin)
-                    .max(0.);
+        for i in 0..bounds.len() {
+            let bound = bounds.get(i).unwrap();
+            let point_num = base_point_num.get(i).unwrap();
+            let additional_point_num = additional_point_nums.get(i).unwrap();
 
-                let desired_num = self.get_desired_num_points_at(camera_state, z, *point_num);
-                if exclude_base_points {
-                    desired_num - (*point_num).min(desired_num)
-                } else {
-                    desired_num
-                }
-            })
-            .collect()
+            let margin = (bound.max_x - bound.min_x)
+                .max(bound.max_y - bound.min_y)
+                .max(bound.max_z - bound.min_z)
+                / (self.anti_alias.scale * 2.0);
+
+            let z = (bound
+                .get_vertexes()
+                .iter()
+                .map(|poi| camera_state.distance(self.anti_alias.apply_single(poi)))
+                .min_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap()
+                - margin)
+                .max(0.);
+
+            let desired_num = self.get_desired_num_points_at(camera_state, z, *point_num);
+            let deficit = desired_num - (*point_num).min(desired_num);
+            let additional_point_needed = self.binary_search(additional_point_num, deficit);
+
+            desired_num_points[i] = if exclude_base_points {
+                additional_point_needed
+            } else {
+                *point_num + additional_point_needed
+            };
+        }
+
+        return desired_num_points;
+    }
+
+    /// Use binary search to get the minimum additional points needed to achieve the desired points
+    fn binary_search(&self, additional_point_nums: &Vec<usize>, desired_point_num: usize) -> usize {
+        let mut left = 0;
+        let mut right = additional_point_nums.len() - 1;
+
+        while left < right {
+            let mid = (left + right) / 2;
+            let mid_val = additional_point_nums.get(mid).unwrap();
+
+            if *mid_val < desired_point_num {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+
+        return additional_point_nums.get(left).unwrap().clone();
     }
 
     fn get_desired_num_points_at(

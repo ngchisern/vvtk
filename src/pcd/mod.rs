@@ -39,5 +39,6 @@ pub use reader::{
     read_pcd, read_pcd_file, read_pcd_file_with_header, read_pcd_header, PCDReadError,
 };
 pub use writer::{
-    create_pcd, create_pcd_from_pc_normal, create_pcd_from_pc_segment, write_pcd, write_pcd_file,
+    create_pcd, create_pcd_from_pc_normal, create_pcd_from_pc_segment, write_pcd, write_pcd_data,
+    write_pcd_file,
 };

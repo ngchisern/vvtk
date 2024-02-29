@@ -75,7 +75,7 @@ impl Subcommand for NormalEstimation {
                     ));
                 }
                 PipelineMessage::Metrics(_)
-                | PipelineMessage::IndexedPointCloudWithName(_, _, _)
+                | PipelineMessage::IndexedPointCloudWithName(_, _, _, _)
                 | PipelineMessage::IndexedPointCloudNormal(_, _)
                 | PipelineMessage::MetaData(_, _, _, _, _)
                 | PipelineMessage::DummyForIncrement => {}

@@ -3,7 +3,8 @@ use clap::Parser;
 
 use crate::formats::metadata::MetaData;
 use crate::pcd::{
-    create_pcd, create_pcd_from_pc_normal, create_pcd_from_pc_segment, write_pcd_file, PCDDataType,
+    create_pcd, create_pcd_from_pc_normal, create_pcd_from_pc_segment, write_pcd_data,
+    write_pcd_file, PCDDataType,
 };
 use crate::pipeline::channel::Channel;
 use crate::pipeline::PipelineMessage;
@@ -156,7 +157,7 @@ impl Subcommand for Write {
                         }
                     }
                 }
-                PipelineMessage::IndexedPointCloudWithName(pc, i, name) => {
+                PipelineMessage::IndexedPointCloudWithName(pc, i, name, with_header) => {
                     let pcd_data_type = self
                         .args
                         .storage_type
@@ -202,8 +203,18 @@ impl Subcommand for Write {
 
                         match output_format.as_str() {
                             "pcd" => {
-                                if let Err(e) = write_pcd_file(&pcd, pcd_data_type, &output_file) {
-                                    println!("Failed to write {:?}\n{e}", output_file);
+                                if *with_header {
+                                    if let Err(e) =
+                                        write_pcd_file(&pcd, pcd_data_type, &output_file)
+                                    {
+                                        println!("Failed to write {:?}\n{e}", output_file);
+                                    }
+                                } else {
+                                    if let Err(e) =
+                                        write_pcd_data(&pcd, pcd_data_type, &output_file)
+                                    {
+                                        println!("Failed to write {:?}\n{e}", output_file);
+                                    }
                                 }
                             }
                             "ply" => {

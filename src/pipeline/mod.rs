@@ -48,7 +48,7 @@ fn subcommand(s: &str) -> Option<SubcommandCreator> {
 pub enum PipelineMessage {
     IndexedPointCloud(PointCloud<PointXyzRgba>, u32),
     IndexedPointCloudNormal(PointCloud<PointXyzRgbaNormal>, u32),
-    IndexedPointCloudWithName(PointCloud<PointXyzRgba>, u32, String),
+    IndexedPointCloudWithName(PointCloud<PointXyzRgba>, u32, String, bool),
     // PointCloud(PointCloud<PointXyzRgba>),
     MetaData(
         Bounds,

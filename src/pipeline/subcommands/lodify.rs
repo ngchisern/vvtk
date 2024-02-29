@@ -67,6 +67,7 @@ impl Subcommand for Lodifier {
                         base_pc.clone(),
                         i,
                         "base".to_string(),
+                        true,
                     ));
 
                     for (segment, pc) in pc_by_segment.into_iter().enumerate() {
@@ -74,6 +75,7 @@ impl Subcommand for Lodifier {
                             pc,
                             i,
                             format!("{}", segment),
+                            false, // don't need headers for additional point clouds
                         ));
                     }
 
@@ -85,16 +87,29 @@ impl Subcommand for Lodifier {
                         .map(|points| points.points.len())
                         .collect();
 
+                    let additional_point_nums = point_num_by_res
+                        .iter()
+                        .map(|points| {
+                            points
+                                .iter()
+                                .scan(0, |acc, &num| {
+                                    *acc += num;
+                                    Some(*acc)
+                                })
+                                .collect()
+                        })
+                        .collect();
+
                     channel.send(PipelineMessage::MetaData(
                         bound,
                         point_nums,
                         point_num_by_res.len(),
                         self.partitions,
-                        point_num_by_res,
+                        additional_point_nums,
                     ));
                 }
                 PipelineMessage::Metrics(_)
-                | PipelineMessage::IndexedPointCloudWithName(_, _, _)
+                | PipelineMessage::IndexedPointCloudWithName(_, _, _, _)
                 | PipelineMessage::IndexedPointCloudNormal(_, _)
                 | PipelineMessage::MetaData(_, _, _, _, _)
                 | PipelineMessage::DummyForIncrement => {}
