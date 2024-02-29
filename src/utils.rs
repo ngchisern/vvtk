@@ -4,7 +4,7 @@ use crate::{
         PointCloud,
     },
     pcd::{
-        create_pcd, read_pcd_file, read_pcd_file_with_exact, read_pcd_header, write_pcd_file,
+        create_pcd, read_pcd_file, read_pcd_file_with_header, read_pcd_header, write_pcd_file,
         PCDDataType, PCDHeader, PointCloudData,
     },
     ply::{read_ply, read_ply_header},
@@ -57,17 +57,15 @@ pub fn read_file_to_point_cloud(file: &PathBuf) -> Option<PointCloud<PointXyzRgb
     None
 }
 
-pub fn read_file_to_point_cloud_with_exact(
+pub fn read_pcd_to_point_cloud_with_header(
     file: &PathBuf,
-    point_num: u64,
+    header: PCDHeader,
 ) -> Option<PointCloud<PointXyzRgba>> {
     if let Some(ext) = file.extension().and_then(|ext| ext.to_str()) {
         let point_cloud = match ext {
-            "ply" => read_ply(file),
-            "pcd" => read_pcd_file_with_exact(file, point_num)
+            "pcd" => read_pcd_file_with_header(file, header)
                 .map(PointCloud::from)
                 .ok(),
-            "bin" => read_velodyn_bin_file(file).map(PointCloud::from).ok(),
             _ => None,
         };
         return point_cloud;

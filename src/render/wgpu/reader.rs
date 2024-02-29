@@ -1,7 +1,7 @@
 use crate::formats::pointxyzrgba::PointXyzRgba;
 use crate::formats::PointCloud;
-use crate::pcd::read_pcd_file;
-use crate::utils::{read_file_to_point_cloud, read_file_to_point_cloud_with_exact};
+use crate::pcd::{read_pcd_file, PCDHeader};
+use crate::utils::{read_file_to_point_cloud, read_pcd_to_point_cloud_with_header};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
@@ -14,7 +14,7 @@ use super::renderable::Renderable;
 pub trait RenderReader<T: Renderable> {
     fn start(&mut self) -> Option<T>;
     fn get_at(&mut self, index: usize) -> Option<T>;
-    fn get_exact_at(&self, _: usize, _: u64) -> Option<T> {
+    fn get_with_header_at(&self, _: usize, _: PCDHeader) -> Option<T> {
         None
     }
     fn get_nested_at(&self, _: usize, _: usize) -> Option<T> {
@@ -126,9 +126,13 @@ impl RenderReader<PointCloud<PointXyzRgba>> for PointCloudFileReader {
         read_file_to_point_cloud(file_path.first().unwrap())
     }
 
-    fn get_exact_at(&self, index: usize, point_num: u64) -> Option<PointCloud<PointXyzRgba>> {
+    fn get_with_header_at(
+        &self,
+        index: usize,
+        header: PCDHeader,
+    ) -> Option<PointCloud<PointXyzRgba>> {
         let file_path = self.files.get(index)?;
-        read_file_to_point_cloud_with_exact(file_path.first().unwrap(), point_num)
+        read_pcd_to_point_cloud_with_header(file_path.first().unwrap(), header)
     }
 
     fn get_nested_at(&self, index: usize, nested_index: usize) -> Option<PointCloud<PointXyzRgba>> {

@@ -1,6 +1,7 @@
 use crate::formats::metadata::MetaData;
 use crate::formats::pointxyzrgba::PointXyzRgba;
 use crate::formats::PointCloud;
+use crate::pcd::{read_pcd_header, PCDHeader};
 use std::ops::Add;
 use std::path::Path;
 use std::process::exit;
@@ -131,6 +132,7 @@ impl AdaptiveReader {
         let mut now = std::time::Instant::now();
         let base_pc = self.base_reader.get_at(index).unwrap();
         let total = now.elapsed();
+        println!("total: {:?}", total);
 
         if self.additional_readers.is_none()
             || self.camera_state.is_none()
@@ -154,10 +156,11 @@ impl AdaptiveReader {
 
         now = std::time::Instant::now();
         // for each num_of_points_required, read more points from additional readers into vector of points
+        let mut header = read_pcd_header(self.base_reader.get_path_at(index).unwrap()).unwrap();
         let additional_points_required = additional_num_points_desired
             .iter()
             .enumerate()
-            .map(|(segment, &num)| self.read_more_points(index, num, segment))
+            .map(|(segment, &num)| self.read_more_points(index, &mut header, num, segment))
             .collect::<Vec<_>>()
             .concat();
         println!("total read time: {:?}", total.add(now.elapsed()));
@@ -177,19 +180,22 @@ impl AdaptiveReader {
     fn read_more_points(
         &self,
         index: usize,
+        header: &mut PCDHeader,
         num_of_points: usize,
         segment: usize,
     ) -> Vec<PointXyzRgba> {
         if num_of_points <= 0 {
             vec![]
         } else {
+            header.set_points(num_of_points as u64);
+
             let pc = self
                 .additional_readers
                 .as_ref()
                 .unwrap()
                 .get(segment)
                 .unwrap()
-                .get_exact_at(index, num_of_points as u64)
+                .get_with_header_at(index, header.clone())
                 .unwrap();
 
             pc.points
