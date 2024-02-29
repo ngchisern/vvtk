@@ -86,12 +86,13 @@ impl AdaptiveReader {
                 exit(1);
             };
 
-            let additional_readers = (0..metadata.num_of_additional_file)
-                .map(|i| {
-                    let path = Path::new(&src).join(i.to_string());
-                    PointCloudFileReader::from_directory(&path, &play_format)
-                })
-                .collect::<Vec<_>>();
+            let additional_readers =
+                (0..metadata.partitions.0 * metadata.partitions.1 * metadata.partitions.2)
+                    .map(|i| {
+                        let path = Path::new(&src).join(i.to_string());
+                        PointCloudFileReader::from_directory(&path, &play_format)
+                    })
+                    .collect::<Vec<_>>();
 
             let len = base_reader.len();
             for reader in additional_readers.iter() {

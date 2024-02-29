@@ -233,22 +233,20 @@ impl Subcommand for Write {
                 }
                 PipelineMessage::MetaData(
                     bound,
-                    point_num,
-                    num_of_additional_file,
+                    base_point_num,
+                    additional_point_num,
                     partitions,
-                    point_nums_per_segment,
                 ) => {
                     self.metadata.next(
                         bound.clone(),
-                        point_num.clone(),
-                        point_nums_per_segment.clone(),
+                        base_point_num.clone(),
+                        additional_point_num.clone(),
                     );
-                    self.metadata.num_of_additional_file = *num_of_additional_file;
                     self.metadata.partitions = *partitions;
                 }
                 PipelineMessage::DummyForIncrement => {}
                 PipelineMessage::End => {
-                    if self.metadata.num_of_additional_file > 0 {
+                    if self.metadata.additional_point_num.len() > 0 {
                         if !output_path.exists() {
                             std::fs::create_dir_all(output_path)
                                 .expect("Failed to create output directory");

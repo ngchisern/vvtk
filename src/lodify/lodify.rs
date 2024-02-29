@@ -1,87 +1,130 @@
+use std::collections::VecDeque;
+use std::iter::zip;
+
+use crate::formats::bounds::Bounds;
 use crate::formats::{pointxyzrgba::PointXyzRgba, PointCloud};
-use crate::subsample::random_sampler::subsample;
 use crate::utils::get_pc_bound;
 
 pub fn lodify(
     points: &PointCloud<PointXyzRgba>,
     partitions: (usize, usize, usize),
-    proportions: Vec<usize>,
+    base_proportion: usize,
     points_per_voxel_threshold: usize,
 ) -> (
     PointCloud<PointXyzRgba>,
     Vec<PointCloud<PointXyzRgba>>,
-    Vec<Vec<usize>>,
+    Vec<usize>,
+    Vec<usize>,
 ) {
     if points.points.is_empty() {
-        return (points.clone(), vec![], vec![]);
+        return (points.clone(), vec![], vec![], vec![]);
     } else {
-        let points = subsample(points, proportions, points_per_voxel_threshold);
+        let factor = base_proportion as f32 / 100.0;
+        let base_point_num = (points.points.len() as f32 * factor).ceil() as usize;
 
-        if points.len() == 1 {
-            return (points[0].clone(), vec![], vec![]);
-        }
+        let (base_pc, additional_pc) = sample(points, base_point_num, points_per_voxel_threshold);
+        let partitioned_add_pc = partition(&additional_pc, partitions);
 
-        let base_pc = points[0].clone();
-        let additional_pcs = points[1..].to_vec();
+        let pc_by_segment = partitioned_add_pc
+            .segments
+            .iter()
+            .map(|segment| PointCloud::new(segment.points.len(), segment.points.clone()))
+            .collect();
 
-        let (pc_by_segment, point_num_by_resolution) =
-            Partitioner::new(additional_pcs, partitions).get_additional_points_by_segment();
+        let base_point_nums = partition(&base_pc, partitions)
+            .segments
+            .iter()
+            .map(|points| points.points.len())
+            .collect();
 
-        (base_pc, pc_by_segment, point_num_by_resolution)
+        let additional_point_nums = partitioned_add_pc
+            .segments
+            .iter()
+            .map(|points| points.points.len())
+            .collect();
+
+        (
+            base_pc,
+            pc_by_segment,
+            base_point_nums,
+            additional_point_nums,
+        )
     }
 }
 
-// Partitioner for partitioning additional points by segments
-// each segment will contain points of different resolution
-// e.g. (r0, r0, ...., r0, r1, r1, ...., r1, r2, r2, ...., r2)
-struct Partitioner {
-    point_clouds: Vec<PointCloud<PointXyzRgba>>,
-    partitions: (usize, usize, usize),
-}
+fn sample(
+    pc: &PointCloud<PointXyzRgba>,
+    base_point_num: usize,
+    points_per_voxel_threshold: usize,
+) -> (PointCloud<PointXyzRgba>, PointCloud<PointXyzRgba>) {
+    if pc.points.is_empty() {
+        return (pc.clone(), PointCloud::new(0, vec![]));
+    } else {
+        let bound = get_pc_bound(&pc);
+        let mut points_by_voxel = VecDeque::from(get_points_in_small_enough_voxel(
+            pc.points.clone(),
+            points_per_voxel_threshold,
+            bound,
+        ));
 
-impl Partitioner {
-    pub fn new(
-        point_clouds: Vec<PointCloud<PointXyzRgba>>,
-        partitions: (usize, usize, usize),
-    ) -> Self {
-        Partitioner {
-            point_clouds,
-            partitions,
-        }
-    }
+        let mut base_pc = vec![];
+        let mut additional_pcs = vec![];
 
-    pub fn get_additional_points_by_segment(
-        &self,
-    ) -> (Vec<PointCloud<PointXyzRgba>>, Vec<Vec<usize>>) {
-        let mut partitioned_pcs = vec![];
+        // this attempts to keep the base points as evenly distributed as possible
+        while points_by_voxel.len() > 0 {
+            let mut points = points_by_voxel.pop_front().unwrap();
 
-        for pc in &self.point_clouds {
-            let partitioned_pc = partition(&pc, self.partitions);
-            partitioned_pcs.push(partitioned_pc);
-        }
+            if points.is_empty() {
+                continue;
+            }
 
-        let num_of_segments = self.partitions.0 * self.partitions.1 * self.partitions.2;
-        let mut points_by_segments = vec![vec![]; num_of_segments];
-        let mut point_num_by_resolutions = vec![vec![]; num_of_segments];
+            let popped = points.pop().unwrap();
 
-        for pc in &partitioned_pcs {
-            for (i, segment) in pc.segments.iter().enumerate() {
-                points_by_segments[i].extend(segment.points.iter().cloned());
-                point_num_by_resolutions[i].push(segment.points.len());
+            if base_pc.len() < base_point_num {
+                base_pc.push(popped);
+            } else {
+                additional_pcs.push(popped);
+            }
+
+            if points.len() > 0 {
+                points_by_voxel.push_back(points);
             }
         }
 
-        let mut new_pcs = vec![];
-
-        for points in points_by_segments {
-            new_pcs.push(PointCloud::new(points.len(), points));
-        }
-
-        (new_pcs, point_num_by_resolutions)
+        (
+            PointCloud::new(base_pc.len(), base_pc),
+            PointCloud::new(additional_pcs.len(), additional_pcs),
+        )
     }
 }
 
-pub fn partition(
+/// obtain points in a voxel that is small enough
+fn get_points_in_small_enough_voxel(
+    points: Vec<PointXyzRgba>,
+    points_per_voxel_threshold: usize,
+    bound: Bounds,
+) -> Vec<Vec<PointXyzRgba>> {
+    if points.len() <= points_per_voxel_threshold {
+        return vec![points];
+    }
+
+    let mut voxels = vec![vec![]; 8];
+    let split_bounds = bound.split();
+    for point in points {
+        for i in 0..8 {
+            if split_bounds[i].contains(&point) {
+                voxels[i].push(point);
+                break;
+            }
+        }
+    }
+
+    zip(voxels, split_bounds)
+        .flat_map(|(p, b)| get_points_in_small_enough_voxel(p, points_per_voxel_threshold, b))
+        .collect()
+}
+
+fn partition(
     pc: &PointCloud<PointXyzRgba>,
     partitions: (usize, usize, usize),
 ) -> PointCloud<PointXyzRgba> {
